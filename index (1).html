@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & tokens ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #f5f5f7;
+  --surface:     #ffffff;
+  --surface2:    #f0f0f2;
+  --border:      #e0e0e4;
+  --text:        #1a1a1e;
+  --text2:       #60606a;
+  --text3:       #9090a0;
+  --accent:      #2563eb;
+  --accent-soft: #dbeafe;
+  --accent-glow: rgba(37,99,235,0.15);
+  --red:         #dc2626;
+  --green:       #16a34a;
+  --radius:      10px;
+  --radius-lg:   16px;
+  --shadow:      0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+  --shadow-lg:   0 8px 40px rgba(0,0,0,.12);
+  --font:        'DM Sans', system-ui, sans-serif;
+  --mono:        'DM Mono', monospace;
+  --bar-h:       52px;
+  --transition:  0.18s cubic-bezier(.4,0,.2,1);
+}
+
+[data-theme="dark"] {
+  --bg:          #0f0f12;
+  --surface:     #1a1a1f;
+  --surface2:    #25252c;
+  --border:      #2e2e38;
+  --text:        #e8e8f0;
+  --text2:       #9090a8;
+  --text3:       #60606e;
+  --accent:      #3b82f6;
+  --accent-soft: #1e3a5f;
+  --accent-glow: rgba(59,130,246,0.2);
+  --shadow:      0 1px 3px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.3);
+  --shadow-lg:   0 8px 40px rgba(0,0,0,.5);
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* ── Browser chrome ─────────────────────────────────────────── */
+#chrome {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+  z-index: 10;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+/* Tab strip */
+#tab-strip {
+  display: flex;
+  align-items: flex-end;
+  padding: 6px 8px 0 8px;
+  gap: 2px;
+  min-height: 36px;
+  background: var(--bg);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--surface2);
+  border-radius: 8px 8px 0 0;
+  padding: 6px 12px;
+  max-width: 200px;
+  min-width: 140px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: default;
+  position: relative;
+}
+
+.tab.active {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.tab-favicon { width: 14px; height: 14px; flex-shrink: 0; }
+.tab-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab-close { color: var(--text3); font-size: 16px; line-height: 1; padding: 1px 2px; border-radius: 3px; }
+.tab-close:hover { background: var(--border); color: var(--text); }
+
+/* Toolbar */
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  height: var(--bar-h);
+}
+
+.nav-btn {
+  width: 32px; height: 32px;
+  border: none; background: none;
+  border-radius: 50%;
+  color: var(--text2);
+  font-size: 17px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition), color var(--transition);
+}
+.nav-btn:hover:not(:disabled) { background: var(--surface2); color: var(--text); }
+.nav-btn:disabled { color: var(--border); cursor: default; }
+.nav-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Omnibox */
+#omnibox {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: var(--surface2);
+  border: 1.5px solid transparent;
+  border-radius: 100px;
+  padding: 0 14px;
+  gap: 8px;
+  height: 36px;
+  cursor: text;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+#omnibox:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  background: var(--surface);
+}
+
+#lock-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  transition: opacity var(--transition);
+}
+
+#url-input {
+  flex: 1;
+  border: none; outline: none;
+  background: transparent;
+  font-size: 13px;
+  font-family: var(--mono);
+  color: var(--text);
+  min-width: 0;
+}
+#url-input::placeholder { font-family: var(--font); color: var(--text3); }
+
+#mode-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 100px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+/* Right buttons */
+.chrome-btn {
+  width: 32px; height: 32px;
+  border: none; background: none;
+  border-radius: 50%;
+  color: var(--text2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition), color var(--transition);
+}
+.chrome-btn:hover { background: var(--surface2); color: var(--text); }
+.chrome-btn svg { width: 18px; height: 18px; }
+
+/* Progress bar */
+#progress {
+  height: 2px;
+  background: transparent;
+  position: relative;
+  overflow: visible;
+}
+#progress.loading { background: var(--border); }
+#progress-fill {
+  position: absolute; top: 0; left: 0;
+  height: 100%; width: 0%;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+  transition: width 0s;
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* ── Content area ────────────────────────────────────────────── */
+#viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+#browser-frame {
+  width: 100%; height: 100%;
+  border: none;
+  background: #fff;
+  display: block;
+}
+
+/* ── New-tab / Home page ─────────────────────────────────────── */
+#home-page {
+  position: absolute; inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  background: var(--bg);
+  z-index: 5;
+}
+
+#home-page.hidden { display: none; }
+
+#home-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#home-logo svg {
+  width: 48px; height: 48px;
+}
+
+#home-logo h1 {
+  font-size: 36px;
+  font-weight: 300;
+  letter-spacing: -.02em;
+  color: var(--text);
+}
+
+#home-search {
+  width: min(580px, 90vw);
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 100px;
+  padding: 0 20px;
+  gap: 12px;
+  height: 52px;
+  box-shadow: var(--shadow);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+#home-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow);
+}
+
+#home-search svg { width: 20px; height: 20px; color: var(--text3); flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+#home-input {
+  flex: 1;
+  border: none; outline: none;
+  background: transparent;
+  font-size: 16px;
+  font-family: var(--font);
+  color: var(--text);
+}
+#home-input::placeholder { color: var(--text3); }
+
+#home-go {
+  width: 36px; height: 36px;
+  border: none;
+  background: var(--accent);
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition), transform var(--transition);
+}
+#home-go:hover { background: #1d4ed8; transform: scale(1.05); }
+#home-go svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+#quick-links {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: min(580px, 90vw);
+}
+
+.quick-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--text2);
+  font-size: 12px;
+  transition: box-shadow var(--transition), border-color var(--transition), color var(--transition);
+  min-width: 70px;
+}
+.quick-link:hover { box-shadow: var(--shadow); border-color: var(--accent); color: var(--text); }
+.quick-link img { width: 24px; height: 24px; }
+
+/* ── Overlay panels (Settings, History) ─────────────────────── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 60px 12px 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition);
+  backdrop-filter: blur(2px);
+}
+.overlay.visible { opacity: 1; pointer-events: all; }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 340px;
+  max-height: 80vh;
+  overflow-y: auto;
+  transform: translateY(-8px);
+  transition: transform var(--transition);
+}
+.overlay.visible .panel { transform: translateY(0); }
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0;
+  background: var(--surface);
+  z-index: 1;
+}
+.panel-header h2 { font-size: 15px; font-weight: 600; }
+.panel-close {
+  width: 28px; height: 28px;
+  border: none; background: none;
+  border-radius: 50%;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--transition);
+}
+.panel-close:hover { background: var(--surface2); }
+
+.panel-section {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-section:last-child { border-bottom: none; }
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text3);
+  margin-bottom: 12px;
+}
+
+/* Mode selector */
+.mode-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mode-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+.mode-opt:hover { background: var(--surface2); }
+.mode-opt.selected { border-color: var(--accent); background: var(--accent-soft); }
+
+.mode-radio {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: border-color var(--transition), background var(--transition);
+}
+.mode-opt.selected .mode-radio { border-color: var(--accent); background: var(--accent); }
+
+.mode-info strong { font-size: 13px; font-weight: 600; display: block; margin-bottom: 2px; }
+.mode-info span { font-size: 12px; color: var(--text2); line-height: 1.4; }
+
+/* Toggle rows */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  gap: 12px;
+}
+.toggle-info { flex: 1; }
+.toggle-info strong { font-size: 13px; display: block; margin-bottom: 2px; }
+.toggle-info span { font-size: 12px; color: var(--text2); }
+
+.toggle {
+  position: relative;
+  width: 40px; height: 22px;
+  flex-shrink: 0;
+}
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-track {
+  position: absolute; inset: 0;
+  background: var(--border);
+  border-radius: 100px;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.toggle input:checked ~ .toggle-track { background: var(--accent); }
+.toggle-thumb {
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  transition: transform var(--transition);
+  pointer-events: none;
+}
+.toggle input:checked ~ .toggle-track .toggle-thumb { transform: translateX(18px); }
+
+/* Worker URL input */
+.worker-input-wrap {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.worker-input-wrap input {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-family: var(--mono);
+  background: var(--surface2);
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.worker-input-wrap input:focus { border-color: var(--accent); }
+.save-btn {
+  padding: 8px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition);
+  white-space: nowrap;
+}
+.save-btn:hover { background: #1d4ed8; }
+
+#worker-status {
+  font-size: 11px;
+  margin-top: 6px;
+  color: var(--text3);
+}
+#worker-status.ok { color: var(--green); }
+#worker-status.err { color: var(--red); }
+
+/* History panel */
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.history-item:hover { background: var(--surface2); }
+.history-item img { width: 16px; height: 16px; flex-shrink: 0; }
+.history-url { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.history-empty { font-size: 13px; color: var(--text3); padding: 20px; text-align: center; }
+
+/* Bookmarks bar */
+#bookmarks-bar {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#bookmarks-bar::-webkit-scrollbar { display: none; }
+#bookmarks-bar.visible { display: flex; }
+
+.bm-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+  border: none; background: none;
+  white-space: nowrap;
+  transition: background var(--transition), color var(--transition);
+}
+.bm-chip:hover { background: var(--surface2); color: var(--text); }
+.bm-chip img { width: 14px; height: 14px; }
+
+/* Error page (set as frame srcdoc) */
+/* styles are inline in JS template */
+
+/* Toasts */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 20px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 200;
+  opacity: 0;
+  transition: opacity .2s, transform .2s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+#toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Scrollbar theming */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ BROWSER CHROME ═══════════════════ -->
+<div id="chrome">
+
+  <!-- Tab strip -->
+  <div id="tab-strip">
+    <div class="tab active">
+      <img class="tab-favicon" id="tab-fav" src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23e0e0e4'/></svg>" alt="">
+      <span class="tab-title" id="tab-title-text">New Tab</span>
+      <span class="tab-close">×</span>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <!-- Back -->
+    <button class="nav-btn" id="btn-back" disabled title="Back (Alt+←)">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <!-- Forward -->
+    <button class="nav-btn" id="btn-fwd" disabled title="Forward (Alt+→)">
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+    <!-- Reload -->
+    <button class="nav-btn" id="btn-reload" title="Reload (⌘R)">
+      <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    </button>
+    <!-- Home -->
+    <button class="nav-btn" id="btn-home" title="Home">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </button>
+
+    <!-- Omnibox -->
+    <div id="omnibox">
+      <span id="lock-icon">🔒</span>
+      <input id="url-input" type="text" placeholder="Search or enter address" autocomplete="off" spellcheck="false">
+      <span id="mode-badge">proxy</span>
+    </div>
+
+    <!-- Bookmark this page -->
+    <button class="chrome-btn" id="btn-bm" title="Bookmark">
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+    </button>
+    <!-- History -->
+    <button class="chrome-btn" id="btn-history" title="History">
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </button>
+    <!-- Theme toggle -->
+    <button class="chrome-btn" id="btn-theme" title="Toggle dark/light">
+      <svg id="theme-icon-light" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <svg id="theme-icon-dark" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+    <!-- Settings -->
+    <button class="chrome-btn" id="btn-settings" title="Settings">
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>
+
+  <!-- Bookmarks bar -->
+  <div id="bookmarks-bar"></div>
+
+  <!-- Progress bar -->
+  <div id="progress"><div id="progress-fill"></div></div>
+</div>
+
+<!-- ═══════════════════════ VIEWPORT ══════════════════════════ -->
+<div id="viewport">
+  <!-- Home / new-tab page -->
+  <div id="home-page">
+    <div id="home-logo">
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="24" cy="24" r="22" stroke="var(--accent)" stroke-width="2.5"/>
+        <path d="M24 2 Q36 12 36 24 Q36 36 24 46 Q12 36 12 24 Q12 12 24 2Z" fill="var(--accent)" opacity=".15"/>
+        <ellipse cx="24" cy="24" rx="10" ry="22" stroke="var(--accent)" stroke-width="2" opacity=".5"/>
+        <line x1="2" y1="24" x2="46" y2="24" stroke="var(--accent)" stroke-width="2" opacity=".4"/>
+        <line x1="5" y1="14" x2="43" y2="14" stroke="var(--accent)" stroke-width="1.5" opacity=".3"/>
+        <line x1="5" y1="34" x2="43" y2="34" stroke="var(--accent)" stroke-width="1.5" opacity=".3"/>
+      </svg>
+      <h1>Nexus</h1>
+    </div>
+    <div id="home-search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="home-input" type="text" placeholder="Search or enter a URL…" autocomplete="off" spellcheck="false">
+      <button id="home-go">
+        <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </div>
+    <div id="quick-links">
+      <a class="quick-link" data-url="https://google.com">
+        <img src="https://www.google.com/favicon.ico" alt="">Google
+      </a>
+      <a class="quick-link" data-url="https://wikipedia.org">
+        <img src="https://www.wikipedia.org/favicon.ico" alt="">Wikipedia
+      </a>
+      <a class="quick-link" data-url="https://github.com">
+        <img src="https://github.com/favicon.ico" alt="">GitHub
+      </a>
+      <a class="quick-link" data-url="https://youtube.com">
+        <img src="https://youtube.com/favicon.ico" alt="">YouTube
+      </a>
+      <a class="quick-link" data-url="https://news.ycombinator.com">
+        <img src="https://news.ycombinator.com/favicon.ico" alt="">HN
+      </a>
+    </div>
+  </div>
+
+  <!-- Proxied page frame -->
+  <iframe id="browser-frame"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
+    title="Proxied page"
+  ></iframe>
+</div>
+
+<!-- ═══════════════════ SETTINGS PANEL ════════════════════════ -->
+<div class="overlay" id="settings-overlay">
+  <div class="panel" id="settings-panel">
+    <div class="panel-header">
+      <h2>Settings</h2>
+      <button class="panel-close" id="settings-close">×</button>
+    </div>
+
+    <!-- Routing mode -->
+    <div class="panel-section">
+      <div class="section-label">Routing Mode</div>
+      <div class="mode-opts">
+        <div class="mode-opt selected" data-mode="proxy">
+          <div class="mode-radio"></div>
+          <div class="mode-info">
+            <strong>Proxy</strong>
+            <span>All requests routed through your Cloudflare Worker. Use when sites are blocked.</span>
+          </div>
+        </div>
+        <div class="mode-opt" data-mode="direct">
+          <div class="mode-radio"></div>
+          <div class="mode-info">
+            <strong>Direct</strong>
+            <span>Requests go straight to each site — no proxy. Use on unrestricted networks.</span>
+          </div>
+        </div>
+        <div class="mode-opt" data-mode="smart">
+          <div class="mode-radio"></div>
+          <div class="mode-info">
+            <strong>Smart</strong>
+            <span>Worker decides automatically — proxies likely-blocked sites, loads others directly.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API key toggle -->
+    <div class="panel-section">
+      <div class="section-label">Smart Mode</div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <strong>Use Gemini AI</strong>
+          <span>AI-powered routing decisions. Requires GEMINI_API_KEY in Worker secrets.</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-ai" checked>
+          <div class="toggle-track"><div class="toggle-thumb"></div></div>
+        </label>
+      </div>
+      <p style="font-size:11px;color:var(--text3);margin-top:4px;">
+        When off, Smart Mode uses built-in heuristics instead of Gemini (no API calls made).
+      </p>
+    </div>
+
+    <!-- Display -->
+    <div class="panel-section">
+      <div class="section-label">Display</div>
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <strong>Dark Mode</strong>
+          <span>Switch between light and dark theme.</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-dark">
+          <div class="toggle-track"><div class="toggle-thumb"></div></div>
+        </label>
+      </div>
+      <div class="toggle-row" style="margin-top:6px;">
+        <div class="toggle-info">
+          <strong>Bookmarks Bar</strong>
+          <span>Show saved bookmarks below the toolbar.</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-bm-bar">
+          <div class="toggle-track"><div class="toggle-thumb"></div></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Worker URL -->
+    <div class="panel-section">
+      <div class="section-label">Worker URL</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:8px;">Your Cloudflare Worker endpoint. Deploy <code style="font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:4px;">worker.js</code> first, then paste the URL here.</p>
+      <div class="worker-input-wrap">
+        <input type="text" id="worker-url-input" placeholder="https://proxy.yourname.workers.dev">
+        <button class="save-btn" id="save-worker-url">Save & Test</button>
+      </div>
+      <div id="worker-status">Not configured</div>
+    </div>
+
+    <!-- Bookmarks management -->
+    <div class="panel-section">
+      <div class="section-label">Bookmarks</div>
+      <div id="settings-bookmarks"></div>
+      <p style="font-size:11px;color:var(--text3);margin-top:8px;">Click the bookmark icon in the toolbar to save the current page.</p>
+    </div>
+
+    <!-- Clear data -->
+    <div class="panel-section">
+      <div class="section-label">Data</div>
+      <button onclick="clearData()" style="padding:8px 14px;border:1.5px solid var(--red);color:var(--red);background:none;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;transition:background var(--transition);" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'">
+        Clear All Saved Data
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ HISTORY PANEL ═════════════════════════ -->
+<div class="overlay" id="history-overlay">
+  <div class="panel">
+    <div class="panel-header">
+      <h2>History</h2>
+      <button class="panel-close" id="history-close">×</button>
+    </div>
+    <div id="history-list" style="padding:8px;"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── Config & state ──────────────────────────────────────────────
+const STORAGE_KEYS = {
+  worker: 'nx_worker_url',
+  mode:   'nx_mode',
+  theme:  'nx_theme',
+  bms:    'nx_bookmarks',
+  bmBar:  'nx_bm_bar',
+  ai:     'nx_use_ai',
+}
+
+let WORKER_URL = localStorage.getItem(STORAGE_KEYS.worker) || ''
+let MODE       = localStorage.getItem(STORAGE_KEYS.mode)   || 'proxy'  // proxy | direct | smart
+let USE_AI     = localStorage.getItem(STORAGE_KEYS.ai) !== 'false'
+let bookmarks  = JSON.parse(localStorage.getItem(STORAGE_KEYS.bms) || '[]')
+let history_   = [] // session-only
+let navStack   = []
+let navIndex   = -1
+let currentUrl = ''
+let isLoading  = false
+
+// ── DOM refs ───────────────────────────────────────────────────
+const frame       = document.getElementById('browser-frame')
+const urlInput    = document.getElementById('url-input')
+const homeInput   = document.getElementById('home-input')
+const homePage    = document.getElementById('home-page')
+const modeBadge   = document.getElementById('mode-badge')
+const lockIcon    = document.getElementById('lock-icon')
+const tabTitle    = document.getElementById('tab-title-text')
+const tabFav      = document.getElementById('tab-fav')
+const progressEl  = document.getElementById('progress')
+const progressFill= document.getElementById('progress-fill')
+const bmsBar      = document.getElementById('bookmarks-bar')
+
+// ── Initialise ─────────────────────────────────────────────────
+function init() {
+  // Theme
+  const savedTheme = localStorage.getItem(STORAGE_KEYS.theme) || 'light'
+  setTheme(savedTheme, false)
+  document.getElementById('toggle-dark').checked = savedTheme === 'dark'
+
+  // Mode badge
+  updateModeBadge()
+
+  // Settings UI state
+  setModeUI(MODE)
+  document.getElementById('toggle-ai').checked = USE_AI
+
+  // Worker URL
+  document.getElementById('worker-url-input').value = WORKER_URL
+  if (WORKER_URL) testWorker(true)
+
+  // Bookmarks bar
+  const bmBarOn = localStorage.getItem(STORAGE_KEYS.bmBar) === 'true'
+  document.getElementById('toggle-bm-bar').checked = bmBarOn
+  if (bmBarOn) bmsBar.classList.add('visible')
+  renderBmBar()
+
+  renderSettingsBms()
+}
+
+// ── Navigation ─────────────────────────────────────────────────
+async function navigate(input) {
+  if (!input.trim()) return
+  const url = normalise(input.trim())
+
+  // Decide routing
+  let useProxy = (MODE === 'proxy')
+  if (MODE === 'smart') {
+    useProxy = await askWorkerRoute(url)
+  }
+
+  pushHistory(url)
+  loadPage(url, useProxy)
+}
+
+async function askWorkerRoute(url) {
+  if (!WORKER_URL) return true // no worker = default to proxy attempt
+  try {
+    const res = await fetch(`${WORKER_URL}/route?url=${encodeURIComponent(url)}${USE_AI ? '' : '&ai=0'}`)
+    const data = await res.json()
+    return data.proxy !== false
+  } catch {
+    return true
+  }
+}
+
+async function loadPage(url, useProxy) {
+  if (isLoading) return
+  isLoading = true
+  currentUrl = url
+
+  urlInput.value = url
+  urlInput.blur()
+  tabTitle.textContent = 'Loading…'
+  lockIcon.textContent = '⟳'
+  startProgress()
+  showFrame()
+
+  try {
+    if (!useProxy || !WORKER_URL) {
+      // Direct: open in iframe directly (works for non-CORS-restricted content)
+      frame.src = url
+      finishLoad(url)
+      return
+    }
+
+    // Proxy via Worker
+    const proxyUrl = `${WORKER_URL}?url=${encodeURIComponent(url)}`
+    const res = await fetch(proxyUrl)
+    const ct = res.headers.get('content-type') || ''
+
+    if (ct.includes('application/json')) {
+      const err = await res.json()
+      showError(err, url)
+      return
+    }
+
+    const html = await res.text()
+    if (!html.trim()) { showError({ error: 'empty', message: 'The page returned nothing.' }, url); return }
+
+    frame.srcdoc = html
+    finishLoad(url)
+
+  } catch (e) {
+    showError({ error: 'network', message: e.message }, url)
+  } finally {
+    isLoading = false
+    endProgress()
+  }
+}
+
+function finishLoad(url) {
+  try {
+    const { hostname, protocol } = new URL(url)
+    tabTitle.textContent = hostname
+    urlInput.value = url
+    lockIcon.textContent = protocol === 'https:' ? '🔒' : '⚠️'
+    tabFav.src = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`
+    addToHistory(url)
+  } catch {}
+}
+
+function showFrame() {
+  homePage.classList.add('hidden')
+}
+
+function showHome() {
+  homePage.classList.remove('hidden')
+  frame.srcdoc = ''
+  frame.src = 'about:blank'
+  currentUrl = ''
+  urlInput.value = ''
+  lockIcon.textContent = '🌐'
+  tabTitle.textContent = 'New Tab'
+  tabFav.src = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23e0e0e4'/></svg>"
+}
+
+// ── URL helpers ────────────────────────────────────────────────
+function normalise(input) {
+  if (input.match(/^https?:\/\//i)) return input
+  // Looks like a domain: has a dot and no spaces
+  if (!input.includes(' ') && input.includes('.')) return 'https://' + input
+  // Search query
+  return `https://www.google.com/search?q=${encodeURIComponent(input)}&hl=en`
+}
+
+// ── Nav stack ──────────────────────────────────────────────────
+function pushHistory(url) {
+  navStack = navStack.slice(0, navIndex + 1)
+  navStack.push(url)
+  navIndex = navStack.length - 1
+  updateNavBtns()
+}
+
+function updateNavBtns() {
+  document.getElementById('btn-back').disabled = navIndex <= 0
+  document.getElementById('btn-fwd').disabled  = navIndex >= navStack.length - 1
+}
+
+// ── History ────────────────────────────────────────────────────
+function addToHistory(url) {
+  history_ = history_.filter(u => u !== url)
+  history_.unshift(url)
+  if (history_.length > 50) history_.pop()
+}
+
+// ── Error page ─────────────────────────────────────────────────
+const ERROR_COPY = {
+  fetch_failed: "Couldn't reach that site. It may be blocking cloud requests, or the proxy had trouble connecting. Try a different site to test if the proxy is working.",
+  network:      "Connection problem — check your Worker URL is correct and the Worker is deployed.",
+  empty:        "The site responded but sent back nothing.",
+  no_url:       "No URL was provided.",
+}
+
+function showError(err, url) {
+  const msg = ERROR_COPY[err.error] || err.message || 'Something went wrong.'
+  const tried = err.tried ? ` (tried ${err.tried} different connection methods)` : ''
+  tabTitle.textContent = "Can't open page"
+  lockIcon.textContent = '⚠️'
+
+  frame.srcdoc = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,sans-serif;background:#fff;display:flex;align-items:center;justify-content:center;height:100vh}
+  .box{text-align:center;max-width:460px;padding:40px 24px}
+  .icon{font-size:52px;margin-bottom:20px}
+  h1{font-size:20px;color:#111;margin-bottom:10px;font-weight:600}
+  p{color:#666;font-size:13px;line-height:1.7;margin-bottom:6px}
+  .tried{font-size:11px;color:#999}
+  code{font-size:11px;background:#f5f5f5;padding:1px 6px;border-radius:3px;word-break:break-all}
+  .actions{margin-top:24px;display:flex;gap:10px;justify-content:center}
+  button{padding:9px 20px;border-radius:6px;font-size:13px;cursor:pointer;border:1px solid #ddd;background:#fff;color:#2563eb}
+  button:hover{background:#f0f5ff}
+  .primary{background:#2563eb;color:#fff;border-color:#2563eb}
+  .primary:hover{background:#1d4ed8}
+</style></head><body>
+  <div class="box">
+    <div class="icon">🌐</div>
+    <h1>This page couldn't load</h1>
+    <p>${msg}${tried}</p>
+    <p style="margin-top:12px;font-size:11px;color:#aaa">URL: <code>${url}</code></p>
+    <div class="actions">
+      <button onclick="window.top.postMessage({t:'retry'},'*')">Try again</button>
+      <button class="primary" onclick="window.top.postMessage({t:'home'},'*')">New Tab</button>
+    </div>
+  </div></body></html>`
+}
+
+// ── Progress bar ───────────────────────────────────────────────
+let _progTimer
+function startProgress() {
+  progressEl.classList.add('loading')
+  progressFill.style.transition = 'none'
+  progressFill.style.width = '0%'
+  clearTimeout(_progTimer)
+  setTimeout(() => {
+    progressFill.style.transition = 'width 2.5s ease'
+    progressFill.style.width = '75%'
+  }, 20)
+}
+function endProgress() {
+  progressFill.style.transition = 'width .2s ease'
+  progressFill.style.width = '100%'
+  _progTimer = setTimeout(() => {
+    progressEl.classList.remove('loading')
+    progressFill.style.transition = 'none'
+    progressFill.style.width = '0%'
+  }, 300)
+}
+
+// ── Theme ──────────────────────────────────────────────────────
+function setTheme(t, save = true) {
+  document.documentElement.setAttribute('data-theme', t)
+  document.getElementById('theme-icon-light').style.display = t === 'light' ? '' : 'none'
+  document.getElementById('theme-icon-dark').style.display  = t === 'dark'  ? '' : 'none'
+  if (save) localStorage.setItem(STORAGE_KEYS.theme, t)
+}
+
+// ── Mode ───────────────────────────────────────────────────────
+function setModeUI(m) {
+  document.querySelectorAll('.mode-opt').forEach(el => {
+    el.classList.toggle('selected', el.dataset.mode === m)
+  })
+  MODE = m
+  localStorage.setItem(STORAGE_KEYS.mode, m)
+  updateModeBadge()
+}
+
+function updateModeBadge() {
+  const labels = { proxy: 'proxy', direct: 'direct', smart: 'smart' }
+  modeBadge.textContent = labels[MODE] || MODE
+  const colors = { proxy: '#2563eb', direct: '#16a34a', smart: '#9333ea' }
+  modeBadge.style.color = colors[MODE]
+  modeBadge.style.background = MODE === 'proxy' ? '#dbeafe' : MODE === 'direct' ? '#dcfce7' : '#f3e8ff'
+}
+
+// ── Bookmarks ──────────────────────────────────────────────────
+function addBookmark() {
+  if (!currentUrl) { toast('Navigate to a page first'); return }
+  if (bookmarks.find(b => b.url === currentUrl)) { toast('Already bookmarked'); return }
+  const title = tabTitle.textContent || currentUrl
+  const { hostname } = new URL(currentUrl)
+  bookmarks.unshift({ url: currentUrl, title, favicon: `https://www.google.com/s2/favicons?domain=${hostname}&sz=32` })
+  localStorage.setItem(STORAGE_KEYS.bms, JSON.stringify(bookmarks))
+  renderBmBar()
+  renderSettingsBms()
+  toast('Bookmarked!')
+}
+
+function renderBmBar() {
+  bmsBar.innerHTML = ''
+  bookmarks.forEach(b => {
+    const btn = document.createElement('button')
+    btn.className = 'bm-chip'
+    btn.innerHTML = `<img src="${b.favicon}" alt="" onerror="this.style.display='none'">${b.title.slice(0, 20)}`
+    btn.onclick = () => navigate(b.url)
+    bmsBar.appendChild(btn)
+  })
+}
+
+function renderSettingsBms() {
+  const el = document.getElementById('settings-bookmarks')
+  if (!bookmarks.length) {
+    el.innerHTML = '<p style="font-size:12px;color:var(--text3)">No bookmarks yet.</p>'
+    return
+  }
+  el.innerHTML = bookmarks.map((b, i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <img src="${b.favicon}" style="width:14px;height:14px" onerror="this.style.display='none'">
+      <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${b.title}</span>
+      <button onclick="removeBookmark(${i})" style="border:none;background:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0 4px;border-radius:3px" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">×</button>
+    </div>`).join('')
+}
+
+function removeBookmark(i) {
+  bookmarks.splice(i, 1)
+  localStorage.setItem(STORAGE_KEYS.bms, JSON.stringify(bookmarks))
+  renderBmBar()
+  renderSettingsBms()
+}
+
+// ── History panel ──────────────────────────────────────────────
+function renderHistory() {
+  const list = document.getElementById('history-list')
+  if (!history_.length) {
+    list.innerHTML = '<p class="history-empty">No pages visited this session.</p>'
+    return
+  }
+  list.innerHTML = history_.map(url => {
+    let hostname = url
+    try { hostname = new URL(url).hostname } catch {}
+    const fav = `https://www.google.com/s2/favicons?domain=${hostname}&sz=32`
+    return `<div class="history-item" onclick="navigate('${url.replace(/'/g,"\\'")}');closeHistory()">
+      <img src="${fav}" class="tab-favicon" onerror="this.style.display='none'">
+      <span class="history-url">${url}</span>
+    </div>`
+  }).join('')
+}
+
+// ── Worker test ────────────────────────────────────────────────
+async function testWorker(silent = false) {
+  const statusEl = document.getElementById('worker-status')
+  statusEl.textContent = 'Testing…'
+  statusEl.className = ''
+  try {
+    const res = await fetch(`${WORKER_URL}/ping`, { signal: AbortSignal.timeout(5000) })
+    const data = await res.json()
+    if (data.ok) {
+      statusEl.textContent = '✓ Worker connected'
+      statusEl.className = 'ok'
+      if (!silent) toast('Worker connected ✓')
+    } else throw new Error()
+  } catch {
+    statusEl.textContent = '✗ Could not reach worker'
+    statusEl.className = 'err'
+    if (!silent) toast('Could not reach worker')
+  }
+}
+
+// ── Overlays ───────────────────────────────────────────────────
+function openSettings() { document.getElementById('settings-overlay').classList.add('visible') }
+function closeSettings() { document.getElementById('settings-overlay').classList.remove('visible') }
+function openHistory()  { renderHistory(); document.getElementById('history-overlay').classList.add('visible') }
+function closeHistory() { document.getElementById('history-overlay').classList.remove('visible') }
+
+// ── Toast ──────────────────────────────────────────────────────
+let _toastTimer
+function toast(msg) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.classList.add('visible')
+  clearTimeout(_toastTimer)
+  _toastTimer = setTimeout(() => el.classList.remove('visible'), 2200)
+}
+
+// ── Clear data ─────────────────────────────────────────────────
+function clearData() {
+  if (!confirm('Clear all saved settings, bookmarks, and history?')) return
+  Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k))
+  bookmarks = []; history_ = []
+  renderBmBar(); renderSettingsBms()
+  toast('Data cleared')
+}
+
+// ── Event listeners ────────────────────────────────────────────
+document.getElementById('btn-back').onclick = () => {
+  if (navIndex > 0) { navIndex--; updateNavBtns(); loadPage(navStack[navIndex], MODE === 'proxy') }
+}
+document.getElementById('btn-fwd').onclick = () => {
+  if (navIndex < navStack.length - 1) { navIndex++; updateNavBtns(); loadPage(navStack[navIndex], MODE === 'proxy') }
+}
+document.getElementById('btn-reload').onclick = () => currentUrl ? loadPage(currentUrl, MODE === 'proxy') : null
+document.getElementById('btn-home').onclick   = () => showHome()
+document.getElementById('btn-bm').onclick      = () => addBookmark()
+document.getElementById('btn-history').onclick = () => openHistory()
+document.getElementById('btn-settings').onclick= () => openSettings()
+document.getElementById('settings-close').onclick = () => closeSettings()
+document.getElementById('history-close').onclick  = () => closeHistory()
+
+document.getElementById('btn-theme').onclick = () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
+  setTheme(next)
+  document.getElementById('toggle-dark').checked = next === 'dark'
+}
+
+// Omnibox
+document.getElementById('go-btn') && (document.querySelector('#omnibox .go-btn') || document.getElementById('url-input')).addEventListener('keydown', () => {})
+urlInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') navigate(urlInput.value)
+  if (e.key === 'Escape') { urlInput.value = currentUrl; urlInput.blur() }
+})
+urlInput.addEventListener('focus', () => urlInput.select())
+
+// Home search
+homeInput.addEventListener('keydown', e => { if (e.key === 'Enter') navigate(homeInput.value) })
+document.getElementById('home-go').onclick = () => navigate(homeInput.value)
+
+// Quick links
+document.querySelectorAll('.quick-link').forEach(a => {
+  a.addEventListener('click', e => { e.preventDefault(); navigate(a.dataset.url) })
+})
+
+// Settings — mode selection
+document.querySelectorAll('.mode-opt').forEach(opt => {
+  opt.onclick = () => setModeUI(opt.dataset.mode)
+})
+
+// Settings — AI toggle
+document.getElementById('toggle-ai').onchange = e => {
+  USE_AI = e.target.checked
+  localStorage.setItem(STORAGE_KEYS.ai, USE_AI)
+}
+
+// Settings — dark toggle
+document.getElementById('toggle-dark').onchange = e => setTheme(e.target.checked ? 'dark' : 'light')
+
+// Settings — bookmarks bar
+document.getElementById('toggle-bm-bar').onchange = e => {
+  localStorage.setItem(STORAGE_KEYS.bmBar, e.target.checked)
+  bmsBar.classList.toggle('visible', e.target.checked)
+}
+
+// Settings — save worker URL
+document.getElementById('save-worker-url').onclick = () => {
+  const val = document.getElementById('worker-url-input').value.trim().replace(/\/$/, '')
+  if (!val) { toast('Enter a URL first'); return }
+  WORKER_URL = val
+  localStorage.setItem(STORAGE_KEYS.worker, val)
+  testWorker()
+}
+
+// Overlay — click outside to close
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) ov.classList.remove('visible') })
+})
+
+// Messages from proxied page (link clicks, form submits, error-page buttons)
+window.addEventListener('message', e => {
+  if (!e.data || typeof e.data !== 'object') return
+  if (e.data.t === 'nav')   navigate(e.data.u)
+  if (e.data.t === 'retry') loadPage(currentUrl, MODE !== 'direct')
+  if (e.data.t === 'home')  showHome()
+})
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  const mod = e.metaKey || e.ctrlKey
+  if (mod && e.key === 'r')        { e.preventDefault(); document.getElementById('btn-reload').click() }
+  if (mod && e.key === 'l')        { e.preventDefault(); urlInput.focus(); urlInput.select() }
+  if (mod && e.key === ',')        { e.preventDefault(); openSettings() }
+  if (mod && e.key === 'h')        { e.preventDefault(); openHistory() }
+  if (mod && e.key === 'd')        { e.preventDefault(); addBookmark() }
+  if (e.altKey && e.key === 'ArrowLeft')  { e.preventDefault(); document.getElementById('btn-back').click() }
+  if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); document.getElementById('btn-fwd').click() }
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.overlay.visible').forEach(ov => ov.classList.remove('visible'))
+  }
+})
+
+// ── Boot ───────────────────────────────────────────────────────
+init()
+showHome()
+</script>
+</body>
+</html>
