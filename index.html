@@ -558,6 +558,7 @@ body {
       <span id="lock-icon">🌐</span>
       <input id="url-input" type="text" placeholder="Search or enter address" autocomplete="off" spellcheck="false">
       <span id="mode-badge">proxy</span>
+      <button id="btn-scramjet" title="Open in Scramjet (works with YouTube, Discord, etc.)" onclick="openInScramjet()" style="display:none;padding:0 9px;height:24px;background:#16a34a;color:#fff;border:none;border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;letter-spacing:.02em;" onmouseover="this.style.background='#15803d'" onmouseout="this.style.background='#16a34a'">▶ Scramjet</button>
     </div>
 
     <button class="chrome-btn" id="btn-bm" title="Bookmark (⌘D)">
@@ -698,6 +699,20 @@ body {
       <div id="worker-status">Not configured</div>
     </div>
     <div class="panel-section">
+      <div class="section-label">Scramjet URL <span style="background:#16a34a;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.03em;vertical-align:middle;">YOUTUBE FIX</span></div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:8px;">
+        For YouTube, Discord &amp; complex sites. Deploy free at
+        <a href="https://replit.com" target="_blank" style="color:var(--accent);">replit.com</a>
+        using <a href="https://github.com/MercuryWorkshop/Scramjet-App" target="_blank" style="color:var(--accent);">Scramjet-App</a>,
+        then paste your Repl URL here.
+      </p>
+      <div class="worker-input-wrap">
+        <input type="text" id="scramjet-url-input" placeholder="https://scramjet-app.yourname.repl.co">
+        <button class="save-btn" id="save-scramjet-url">Save</button>
+      </div>
+      <div id="scramjet-status" style="font-size:11px;margin-top:6px;color:var(--text3);">Not configured</div>
+    </div>
+    <div class="panel-section">
       <div class="section-label">Bookmarks</div>
       <div id="settings-bookmarks"></div>
       <p style="font-size:11px;color:var(--text3);margin-top:8px;">Click the bookmark icon to save the current page.</p>
@@ -726,7 +741,7 @@ body {
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  NEXUS  —  Browser-in-Browser  (v4 - Fixed)
+//  NEXUS  —  Browser-in-Browser  (v5 - Scramjet Integration)
 //
 //  Frontend fixes:
 //    • FIX: showHome() no longer resets frame.src to about:blank —
@@ -746,19 +761,21 @@ body {
 // ═══════════════════════════════════════════════════════════════
 
 const STORAGE_KEYS = {
-  worker: 'nx_worker_url',
-  mode:   'nx_mode',
-  theme:  'nx_theme',
-  bms:    'nx_bookmarks',
-  bmBar:  'nx_bm_bar',
-  ai:     'nx_use_ai',
+  worker:   'nx_worker_url',
+  scramjet: 'nx_scramjet_url',
+  mode:     'nx_mode',
+  theme:    'nx_theme',
+  bms:      'nx_bookmarks',
+  bmBar:    'nx_bm_bar',
+  ai:       'nx_use_ai',
 }
 
 const DEFAULT_FAV = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%23e0e0e4'/></svg>"
 
-let WORKER_URL = localStorage.getItem(STORAGE_KEYS.worker) || ''
-let MODE       = localStorage.getItem(STORAGE_KEYS.mode)   || 'proxy'
-let USE_AI     = localStorage.getItem(STORAGE_KEYS.ai) !== 'false'
+let WORKER_URL   = localStorage.getItem(STORAGE_KEYS.worker)   || ''
+let SCRAMJET_URL = localStorage.getItem(STORAGE_KEYS.scramjet) || ''
+let MODE         = localStorage.getItem(STORAGE_KEYS.mode)     || 'proxy'
+let USE_AI       = localStorage.getItem(STORAGE_KEYS.ai) !== 'false'
 let bookmarks  = JSON.parse(localStorage.getItem(STORAGE_KEYS.bms) || '[]')
 let history_   = []
 
@@ -1002,6 +1019,7 @@ function finishLoad(url, tabId) {
     }
     addToGlobalHistory(url)
     renderTabStrip()
+    updateScramjetButton()
   } catch {}
 }
 
@@ -1295,6 +1313,83 @@ function clearData() {
   renderBmBar(); renderSettingsBms()
   toast('Data cleared')
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  SCRAMJET INTEGRATION
+//  Scramjet is a service-worker proxy that actually handles YouTube,
+//  Discord, Spotify etc. by intercepting ALL fetch requests via a SW
+//  — solving the CORS issue that makes the Cloudflare Worker proxy
+//  fail for complex SPAs. Deploy free at replit.com using Scramjet-App.
+// ═══════════════════════════════════════════════════════════════
+
+const SCRAMJET_SITES = [
+  'youtube.com', 'youtu.be', 'discord.com', 'discord.gg',
+  'spotify.com', 'twitter.com', 'x.com', 'instagram.com',
+  'reddit.com', 'geforcenow.com', 'now.gg',
+]
+
+function isScramjetSite(url) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '')
+    return SCRAMJET_SITES.some(s => host === s || host.endsWith('.' + s))
+  } catch { return false }
+}
+
+function updateScramjetButton() {
+  const btn = document.getElementById('btn-scramjet')
+  if (!btn) return
+  const tab = activeTab()
+  const show = SCRAMJET_URL && tab?.url && isScramjetSite(tab.url)
+  btn.style.display = show ? 'inline-flex' : 'none'
+}
+
+function openInScramjet() {
+  if (!SCRAMJET_URL) { toast('Configure Scramjet URL in Settings first'); return }
+  const tab = activeTab()
+  if (!tab?.url) return
+  // Scramjet needs its own top-level origin to register a service worker.
+  // Open it in a new tab — the SW registers there, then it can proxy anything.
+  const win = window.open(SCRAMJET_URL, '_blank')
+  if (!win) { toast('Allow pop-ups for this site, then try again'); return }
+  // Scramjet-App listens for a postMessage with the target URL
+  setTimeout(() => {
+    try { win.postMessage({ type: 'navigate', url: tab.url }, '*') } catch(e) {}
+  }, 2500)
+  toast('Opening ' + tab.url + ' in Scramjet…')
+}
+
+// Init Scramjet settings UI after DOM loads
+;(function initScramjet() {
+  const inp  = document.getElementById('scramjet-url-input')
+  const btn  = document.getElementById('save-scramjet-url')
+  const stat = document.getElementById('scramjet-status')
+  if (!inp || !btn || !stat) return
+
+  if (SCRAMJET_URL) {
+    inp.value = SCRAMJET_URL
+    stat.textContent = '✓ Configured: ' + SCRAMJET_URL
+    stat.style.color = '#16a34a'
+  }
+
+  btn.addEventListener('click', async () => {
+    let val = inp.value.trim().replace(/\/+$/, '')
+    if (!val) {
+      SCRAMJET_URL = ''
+      localStorage.removeItem(STORAGE_KEYS.scramjet)
+      stat.textContent = 'Cleared'
+      stat.style.color = 'var(--text3)'
+      updateScramjetButton()
+      return
+    }
+    if (!val.startsWith('http')) val = 'https://' + val
+    SCRAMJET_URL = val
+    localStorage.setItem(STORAGE_KEYS.scramjet, val)
+    stat.textContent = '✓ Saved — ' + val
+    stat.style.color = '#16a34a'
+    updateScramjetButton()
+    toast('Scramjet URL saved!')
+  })
+})()
 
 // ── HTML escape ───────────────────────────────────────────────────
 function esc(s) {
